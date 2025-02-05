@@ -8,7 +8,7 @@ const Sidebar = ({role}) => {
     <div className="min-h-screen flex">
          <div className="w-64 bg-blue-300 shadow-md">
                   <div className="p-4">
-                    <h2 className="text-2xl font-bold">Dashboard </h2>
+                    <h2 className="text-2xl font-bold"> Admin Dashboard </h2>
                     
                   </div>
                   <nav className="mt-4">
