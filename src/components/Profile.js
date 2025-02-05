@@ -250,7 +250,7 @@ const Profile = () => {
             <div className="mt-1 flex flex-col">
               <strong>Current Password:</strong>
               <input
-                type="text"
+                type="password"
                 name="currentpassword"
                 value={formData.currentpassword}
                 className="border p-1 rounded"
@@ -258,7 +258,7 @@ const Profile = () => {
               />
               <strong>New Password:</strong>
               <input
-                type="text"
+                type="password"
                 name="newpassword"
                 value={formData.newpassword}
                 className="border p-1 rounded"
@@ -266,7 +266,7 @@ const Profile = () => {
               />
               <strong>Confirm Password:</strong>
               <input
-                type="text"
+                type="password"
                 name="newpassword_confirmation"
                 value={formData.newpassword_confirmation}
                 className="border p-1 rounded"
