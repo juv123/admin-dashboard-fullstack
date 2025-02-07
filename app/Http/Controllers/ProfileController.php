@@ -37,7 +37,7 @@ class ProfileController extends Controller
         $user->update($validated);
 
         // Create a notification action
-        $action = 'updated his profile';
+        $action = ',you have updated your profile';
 
         // Send the notification
         $user->notify(new UserActionNotification($user, $action));

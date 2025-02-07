@@ -59,18 +59,36 @@ return response()->json(['message' => 'User updated successfully!', 'user' => $u
   public function delete(int $id){
     $user=User::findOrFail($id);
     $user->delete();
+    $action = 'has been removed'; 
+          // Notify all admins about the role change
+      $admins = User::where('role', 'admin')->get(); // Fetch all admins
+      foreach ($admins as $admin) {
+          $admin->notify(new UserActionNotification($user, "{$user->name} has {$action}."));
+      }
     return response()->json(['message' => 'User has been deleted!']);
   }
-    public function updateRole(Request $request,int $id){
-        $user=User::findOrFail($id);
-        $user->role=$request->input('role');
-        $user->save();
-        $auth_user = Auth::user(); // Get the authenticated user
-        $action = 'been assigned to the ' . $user->role . ' role'; // Define action
-       $auth_user->notify(new UserActionNotification($auth_user, $action));//send role updated notification
-        return response()->json(['message' => 'Requested user role has been updated!']);
-      
-    }
+  public function updateRole(Request $request, int $id)
+  {
+      $user = User::findOrFail($id); // Find the user by ID
+      $oldRole = $user->role; // Capture the old role for notification
+      $user->role = $request->input('role'); // Update the role
+      $user->save(); // Save the user
+  
+      // Define the action for the notification
+      $action = 'has been assigned to the ' . $user->role . ' role'; 
+      $user_action= ',Congratulations!.you have been assigned to  ' . $user->role . ' role.'; 
+  
+      // Send notification to the assigned user
+      $user->notify(new UserActionNotification($user, $user_action));
+  
+      // Notify all admins about the role change
+      $admins = User::where('role', 'admin')->get(); // Fetch all admins
+      foreach ($admins as $admin) {
+          $admin->notify(new UserActionNotification($user, "{$user->name} has {$action}."));
+      }
+  
+      return response()->json(['message' => 'Requested user role has been updated!']);
+  }
     public function findTotalUsers()
  {
     $totalUsers = \App\Models\User::count();

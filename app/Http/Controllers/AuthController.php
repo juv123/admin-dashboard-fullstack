@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications\UserActionNotification;
-
+use App\Jobs\SendWelcomeEmail;
 class AuthController extends Controller
 {
     protected $fillable = [
@@ -17,6 +17,7 @@ class AuthController extends Controller
         'password',
         'role',
     ];
+    
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -32,7 +33,18 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
         ]);
-
+        $action = 'has been added'; 
+        // Notify all admins about the role change
+    $admins = User::where('role', 'admin')->get(); // Fetch all admins
+    foreach ($admins as $admin) {
+        $admin->notify(new UserActionNotification($user, "{$user->name} has {$action}."));
+    }
+    $user_action = ',you have successfully added to our team. Welcome onboard!';
+    //Send the notification
+    $user->notify(new UserActionNotification($user, $user_action));
+     // Dispatch email queue job
+     dispatch(new SendWelcomeEmail($user));
+     dispatch(new SendWelcomeEmail($admins));
         return response()->json(['message' => 'User created successfully'], 201);
     }
 
@@ -92,7 +104,7 @@ class AuthController extends Controller
             // Update password
             $user->password = Hash::make($request->newpassword);
             $user->save();
-            $action = 'Changed his Password';
+            $action = ',you have Changed your Password';
         //Send the notification
         $user->notify(new UserActionNotification($user, $action));
         return response()->json(['message' => 'Password updated successfully'], 200);
