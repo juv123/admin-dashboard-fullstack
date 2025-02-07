@@ -84,7 +84,7 @@ return response()->json(['message' => 'User updated successfully!', 'user' => $u
       // Notify all admins about the role change
       $admins = User::where('role', 'admin')->get(); // Fetch all admins
       foreach ($admins as $admin) {
-          $admin->notify(new UserActionNotification($user, "{$user->name} has {$action}."));
+          $admin->notify(new UserActionNotification($user, "{$user->name} {$action}."));
       }
   
       return response()->json(['message' => 'Requested user role has been updated!']);

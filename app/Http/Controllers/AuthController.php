@@ -9,15 +9,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications\UserActionNotification;
 use App\Jobs\SendWelcomeEmail;
+
 class AuthController extends Controller
 {
-    protected $fillable = [
-        'username',
-        'emailid',
-        'password',
-        'role',
-    ];
-    
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -31,20 +25,29 @@ class AuthController extends Controller
             'username' => $validated['username'],
             'emailid' => $validated['emailid'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
+            'role' => $validated['role'] ?? 'Guest',
         ]);
-        $action = 'has been added'; 
-        // Notify all admins about the role change
-    $admins = User::where('role', 'admin')->get(); // Fetch all admins
-    foreach ($admins as $admin) {
-        $admin->notify(new UserActionNotification($user, "{$user->name} has {$action}."));
-    }
-    $user_action = ',you have successfully added to our team. Welcome onboard!';
-    //Send the notification
-    $user->notify(new UserActionNotification($user, $user_action));
-     // Dispatch email queue job
-     dispatch(new SendWelcomeEmail($user));
-     dispatch(new SendWelcomeEmail($admins));
+
+        $action = 'has been added';
+
+        // Notify all admins about the new user registration
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $admin->notify(new UserActionNotification($user, " {$action}."));
+        }
+
+        // Notify the new user
+        $user_action = 'You have been successfully added to our team. Welcome onboard!';
+        $user->notify(new UserActionNotification($user, $user_action));
+
+        // Dispatch email queue job for the user
+        dispatch(new SendWelcomeEmail($user));
+
+        // Dispatch email queue job for each admin
+        /*foreach ($admins as $admin) {
+            dispatch(new SendWelcomeEmail($admin));
+        }*/
+
         return response()->json(['message' => 'User created successfully'], 201);
     }
 
@@ -55,7 +58,8 @@ class AuthController extends Controller
             'password' => 'required|string|min:8',
         ]);
 
-        if (Auth::attempt($validated)) {
+        // ✅ Specify `emailid` explicitly for authentication
+        if (Auth::attempt(['emailid' => $validated['emailid'], 'password' => $validated['password']])) {
             $user = Auth::user();
             return response()->json(['token' => $user->createToken('Admin Dashboard')->plainTextToken]);
         }
@@ -65,18 +69,7 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        /*$user = $request->user();
-
-    return response()->json([
-        'id' => $user->id,
-        'username' => $user->username,
-        'emailid' => $user->emailid,
-        'role'=>$user->role,
-        'created_at' => $user->created_at,
-        'updated_at' => $user->updated_at,
-        'password' => $user->password,
-    ]);*/
-       return response()->json($request->user());
+        return response()->json($request->user());
     }
 
     public function logout(Request $request)
@@ -84,32 +77,29 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out successfully']);
     }
+
     public function changePassword(Request $request)
     {
-       
-            // Validate input
-            $request->validate([
-                'currentpassword' => 'required',
-                'newpassword' => 'required|min:8|confirmed',
-               
-            ]);
-        
-            $user = Auth::user();
-        
-            // Check if current password matches
-            if (!Hash::check($request->currentpassword, $user->password)) {
-                return response()->json(['message' => 'Current password is incorrect'], 403);
-            }
-        
-            // Update password
-            $user->password = Hash::make($request->newpassword);
-            $user->save();
-            $action = ',you have Changed your Password';
-        //Send the notification
-        $user->notify(new UserActionNotification($user, $action));
-        return response()->json(['message' => 'Password updated successfully'], 200);
-            
-       
+        // Validate input
+        $request->validate([
+            'currentpassword' => 'required',
+            'newpassword' => 'required|min:8|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        // Check if current password matches
+        if (!Hash::check($request->currentpassword, $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect'], 403);
         }
-        
+
+        // Update password
+        $user->password = Hash::make($request->newpassword);
+        $user->save();
+
+        // Send notification for password change
+        $user->notify(new UserActionNotification($user, 'You have changed your password.'));
+
+        return response()->json(['message' => 'Password updated successfully'], 200);
     }
+}
